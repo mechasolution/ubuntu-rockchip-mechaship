@@ -114,6 +114,14 @@ teardown_mountpoint() {
     mv nsswitch.conf.tmp "$mountpoint/etc/nsswitch.conf"
 }
 
+chroot_run() {
+    chroot "${chroot_dir}" /bin/bash -c "$*"
+}
+
+chroot_run_ubuntu() {
+    chroot --userspec=ubuntu:ubuntu "${chroot_dir}" env HOME=/home/ubuntu /bin/bash -c "cd ~ && $*"
+}
+
 # Prevent dpkg interactive dialogues
 export DEBIAN_FRONTEND=noninteractive
 
@@ -126,14 +134,14 @@ overlay_dir=../overlay
 
 # Extract the compressed root filesystem
 rm -rf ${chroot_dir} && mkdir -p ${chroot_dir}
-tar -xpJf "ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootfs.tar.xz" -C ${chroot_dir}
+tar -xpJf "mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootfs.tar.xz" -C ${chroot_dir}
 
 # Mount the root filesystem
 setup_mountpoint $chroot_dir
 
-# Update packages
-chroot $chroot_dir apt-get update
-chroot $chroot_dir apt-get -y upgrade
+# Change to local mirror & DNS server
+chroot_run "sed -i 's|http://ports.ubuntu.com|http://krr.ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list"
+chroot_run "sed -i 's|^\(nameserver[[:space:]]*\).*|\1 192.168.1.11|' /etc/resolv.conf"
     
 # Run config hook to handle board specific changes
 if [[ $(type -t config_image_hook__"${BOARD}") == function ]]; then
@@ -160,15 +168,161 @@ fi
 # Update the initramfs
 chroot ${chroot_dir} update-initramfs -u
 
+# create user & do not create user on cloud-init
+chroot_run "adduser --gecos ",,," --disabled-password ubuntu"
+chroot_run "sh -c 'echo "ubuntu:ubuntu" | chpasswd'"
+chroot_run "usermod -aG sudo ubuntu"
+chroot_run "echo \"ubuntu ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
+echo '#cloud-config
+system_info:
+  default_user: {}' >> ${chroot_dir}/etc/cloud/cloud.cfg.d/91-disable-default-user.cfg
+chroot_run_ubuntu "mkdir temp"
+
+# Update packages, 네트워크 툴 설치
+chroot_run "apt-get update"
+chroot_run "apt-get install net-tools network-manager -y"
+
+# chroot $chroot_dir apt-get -y upgrade
+
+# Install apt-fast
+chroot_run "/bin/bash -c '$(curl -sL https://git.io/vokNn)'"
+
+# ROS2 Jazzy
+echo '#!/bin/bash
+set -e
+DEBIAN_FRONTEND=noninteractive
+
+sudo apt-get install software-properties-common curl -y
+sudo add-apt-repository -y universe
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://krr.packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+sudo apt update
+sudo apt-fast install ros-jazzy-ros-base ros-dev-tools python3-pip -y
+python3 -m pip config set global.break-system-packages true # Disable externally-managed-environment error
+pip install setuptools==70.0.0
+mkdir -p ~/ros2_ws/src && cd ~/ros2_ws
+colcon build
+cd
+sudo rosdep init
+rosdep update
+' >> ${chroot_dir}/home/ubuntu/temp/install_ros2_jazzy.sh
+chmod 777 ${chroot_dir}/home/ubuntu/temp/install_ros2_jazzy.sh
+chroot_run_ubuntu "./temp/install_ros2_jazzy.sh"
+
+# 환경변수
+echo 'source /opt/ros/jazzy/setup.bash
+source /home/ubuntu/ros2_ws/install/setup.bash
+source /home/ubuntu/uros_ws/install/local_setup.bash
+
+export ROS_DOMAIN_ID=0
+
+alias cb="cd ~/ros2_ws && colcon build --symlink-install && source ~/ros2_ws/install/local_setup.bash"' >> ${chroot_dir}/home/ubuntu/ros2_setup.bash
+echo "source ~/ros2_setup.bash" >> ${chroot_dir}/home/ubuntu/.bashrc
+chroot_run "chown ubuntu:ubuntu /home/ubuntu/ros2_setup.bash"
+
+# uROS
+echo '#!/bin/bash
+source ~/ros2_setup.bash
+DEBIAN_FRONTEND=noninteractive
+set -e
+
+mkdir ~/uros_ws && cd ~/uros_ws
+git clone -b $ROS_DISTRO https://github.com/micro-ROS/micro_ros_setup.git src/micro_ros_setup
+rosdep install --from-paths src --ignore-src -y
+colcon build
+source install/local_setup.bash
+ros2 run micro_ros_setup create_agent_ws.sh
+ros2 run micro_ros_setup build_agent.sh
+source install/local_setup.sh
+' >> ${chroot_dir}/home/ubuntu/temp/install_uros.sh
+chmod 777 ${chroot_dir}/home/ubuntu/temp/install_uros.sh
+chroot_run_ubuntu "./temp/install_uros.sh"
+
+# Udev
+echo '# RP2040 MCU
+KERNEL=="ttyACM*", ATTRS{idVendor}=="2e8a", MODE="0666", GROUP="dialout", SYMLINK+="ttyMCU"
+
+# GNSS (GPS)
+# KERNEL=="ttyACM*", ATTRS{idVendor}=="1546", MODE="0666", GROUP="dialout", SYMLINK+="ttyGPS"
+
+# LiDAR
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty", KERNELS=="5-1", SYMLINK+="ttyLiDAR"
+
+# IMU
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty", KERNELS=="4-1", SYMLINK+="ttyIMU"
+
+# Camera
+KERNEL=="video*", ATTR{index}=="0", MODE="0666", SYMLINK+="videoRGBCAMERA0"
+KERNEL=="video*", ATTR{index}=="1", MODE="0666", SYMLINK+="videoRGBCAMERA1"' | sudo tee ${chroot_dir}/etc/udev/rules.d/98-mechaship.rules > /dev/null
+
+# ROS Dependency pkg
+echo '#!/bin/bash
+source ~/ros2_setup.bash
+DEBIAN_FRONTEND=noninteractive
+set -e
+
+sudo apt-fast install -y ros-jazzy-usb-cam ros-jazzy-robot-localization ros-jazzy-slam-toolbox ros-jazzy-vision-msgs ros-jazzy-cartographer ros-jazzy-cartographer-ros ros-jazzy-ros-gz ros-jazzy-cv-bridge ros-jazzy-ublox-gps
+git clone https://github.com/YDLIDAR/YDLidar-SDK
+cd YDLidar-SDK
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+cd ~/ros2_ws/src
+git clone --recurse-submodules https://github.com/mechasolution/mechaship.git
+cd ~/ros2_ws && colcon build --symlink-install
+' >> ${chroot_dir}/home/ubuntu/temp/install_ydlidar_driver.sh
+chmod 777 ${chroot_dir}/home/ubuntu/temp/install_ydlidar_driver.sh
+chroot_run_ubuntu "./temp/install_ydlidar_driver.sh"
+chroot_run_ubuntu "sudo chmod a+s /usr/sbin/poweroff"
+
+# Service unit
+echo '[Unit]
+Description=Mechaship System
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu
+ExecStart=/bin/bash -lc "source /home/ubuntu/ros2_setup.bash && ros2 launch mechaship_system mechaship_system_service.launch.py"
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=2s
+
+[Install]
+WantedBy=multi-user.target' | sudo tee ${chroot_dir}/etc/systemd/system/mechaship_system.service > /dev/null
+chroot_run_ubuntu "sudo systemctl enable mechaship_system.service"
+
+# RKNN
+cp -r ../packages/rknn-toolkit2/rknn_toolkit_lite2-2.3.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl ${chroot_dir}/home/ubuntu/temp/.
+cp -r ../packages/rknn-toolkit2/librknnrt.so ${chroot_dir}/home/ubuntu/temp/.
+chroot_run "chown ubuntu:ubuntu -R /home/ubuntu/temp/*"
+echo '#!/bin/bash
+source ~/ros2_setup.bash
+DEBIAN_FRONTEND=noninteractive
+set -e
+
+# git clone https://github.com/airockchip/rknn-toolkit2/
+sudo apt-fast install python3-dev python3-pip gcc python3-opencv python3-numpy -y
+pip3 install ~/temp/rknn_toolkit_lite2-2.3.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
+sudo cp ~/temp/librknnrt.so /usr/lib/.
+' >> ${chroot_dir}/home/ubuntu/temp/install_rknn.sh
+chmod 777 ${chroot_dir}/home/ubuntu/temp/install_rknn.sh
+chroot_run_ubuntu "./temp/install_rknn.sh"
+
+# Roll back local mirror
+chroot_run "sed -i 's|http://krr.ports.ubuntu.com/ubuntu-ports|http://kr.ports.ubuntu.com|g' /etc/apt/sources.list"
+chroot_run "sed -i 's|http://krr.packages.ros.org/ros2/ubuntu|http://packages.ros.org/ros2/ubuntu|g' /etc/apt/sources.list.d/ros2.list"
+
 # Remove packages
-chroot ${chroot_dir} apt-get -y clean
-chroot ${chroot_dir} apt-get -y autoclean
-chroot ${chroot_dir} apt-get -y autoremove
+chroot_run "apt-get -y clean"
+chroot_run "apt-get -y autoclean"
+chroot_run "apt-get -y autoremove"
+chroot_run "history -c"
+chroot_run "history -w"
+chroot_run_ubuntu "history -c"
+chroot_run_ubuntu "history -w"
 
 # Umount the root filesystem
 teardown_mountpoint $chroot_dir
-
-# Compress the root filesystem and then build a disk image
-cd ${chroot_dir} && tar -cpf "../ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64-${BOARD}.rootfs.tar" . && cd .. && rm -rf ${chroot_dir}
-../scripts/build-image.sh "ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64-${BOARD}.rootfs.tar"
-rm -f "ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64-${BOARD}.rootfs.tar"

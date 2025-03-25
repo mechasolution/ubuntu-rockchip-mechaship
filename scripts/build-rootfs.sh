@@ -27,7 +27,7 @@ fi
 # shellcheck source=/dev/null
 source "../config/flavors/${FLAVOR}.sh"
 
-if [[ -f ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootfs.tar.xz ]]; then
+if [[ -f mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootfs.tar.xz ]]; then
     exit 0
 fi
 
@@ -142,5 +142,5 @@ lb build
 set -eE 
 
 # Tar the entire rootfs
-(cd chroot/ &&  tar -p -c --sort=name --xattrs ./*) | xz -3 -T0 > "ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootfs.tar.xz"
-mv "ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootfs.tar.xz" ../
+(cd chroot/ &&  tar -p -c --sort=name --xattrs ./*) | xz -3 -T0 > "mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootfs.tar.xz"
+mv "mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootfs.tar.xz" ../
