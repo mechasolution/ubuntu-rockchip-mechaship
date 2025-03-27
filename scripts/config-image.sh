@@ -171,7 +171,7 @@ chroot ${chroot_dir} update-initramfs -u
 # create user & do not create user on cloud-init
 chroot_run "adduser --gecos ",,," --disabled-password ubuntu"
 chroot_run "sh -c 'echo "ubuntu:ubuntu" | chpasswd'"
-chroot_run "usermod -aG sudo ubuntu"
+chroot_run "usermod -aG sudo,dialout ubuntu"
 chroot_run "echo \"ubuntu ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
 echo '#cloud-config
 system_info:
