@@ -246,10 +246,10 @@ KERNEL=="ttyACM*", ATTRS{idVendor}=="2e8a", MODE="0666", GROUP="dialout", SYMLIN
 # KERNEL=="ttyACM*", ATTRS{idVendor}=="1546", MODE="0666", GROUP="dialout", SYMLINK+="ttyGPS"
 
 # LiDAR
-KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty", KERNELS=="5-1", SYMLINK+="ttyLiDAR"
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty", KERNELS=="1-1", SYMLINK+="ttyLiDAR"
 
 # IMU
-KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty", KERNELS=="4-1", SYMLINK+="ttyIMU"
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty", KERNELS=="6-1", SYMLINK+="ttyIMU"
 
 # Camera
 KERNEL=="video*", ATTR{index}=="0", MODE="0666", SYMLINK+="videoRGBCAMERA0"
