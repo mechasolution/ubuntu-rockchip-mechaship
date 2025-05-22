@@ -243,7 +243,7 @@ echo '# RP2040 MCU
 KERNEL=="ttyACM*", ATTRS{idVendor}=="2e8a", MODE="0666", GROUP="dialout", SYMLINK+="ttyMCU"
 
 # GNSS (GPS)
-# KERNEL=="ttyACM*", ATTRS{idVendor}=="1546", MODE="0666", GROUP="dialout", SYMLINK+="ttyGPS"
+KERNEL=="ttyACM*", ATTRS{idVendor}=="1546", MODE="0666", GROUP="dialout", SYMLINK+="ttyGPS"
 
 # LiDAR
 KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty", KERNELS=="1-1", SYMLINK+="ttyLiDAR"
