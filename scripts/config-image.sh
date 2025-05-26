@@ -277,15 +277,16 @@ chroot_run_ubuntu "./temp/install_ydlidar_driver.sh"
 chroot_run_ubuntu "sudo chmod a+s /usr/sbin/poweroff"
 
 # Service unit
+mkdir -p ${chroot_dir}/home/ubuntu/.mechaship_system_service
+cp ../packages/mechaship_system/mcu_service.py ${chroot_dir}/home/ubuntu/.mechaship_system_service/.
+
 echo '[Unit]
 Description=Mechaship System
 After=network.target
 
 [Service]
-User=ubuntu
-Group=ubuntu
-WorkingDirectory=/home/ubuntu
-ExecStart=/bin/bash -lc "source /home/ubuntu/ros2_setup.bash && ros2 launch mechaship_system mechaship_system_service.launch.py"
+WorkingDirectory=/home/ubuntu/.mechaship_system_service
+ExecStart=/usr/bin/python3 mcu_service.py
 RemainAfterExit=no
 Restart=on-failure
 RestartSec=2s
