@@ -140,8 +140,10 @@ tar -xpJf "mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootf
 setup_mountpoint $chroot_dir
 
 # Change to local mirror & DNS server
-chroot_run "sed -i 's|http://ports.ubuntu.com|http://krr.ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list"
+chroot_run "sed -i 's|http://ports.ubuntu.com|http://krr.ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list.d/ubuntu.sources"
 chroot_run "sed -i 's|^\(nameserver[[:space:]]*\).*|\1 192.168.1.11|' /etc/resolv.conf"
+
+chroot_run "apt-get update"
     
 # Run config hook to handle board specific changes
 if [[ $(type -t config_image_hook__"${BOARD}") == function ]]; then
@@ -197,7 +199,7 @@ sudo add-apt-repository -y universe
 sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://krr.packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 sudo apt update
-sudo apt-fast install ros-jazzy-ros-base ros-dev-tools python3-pip -y
+sudo apt-get install ros-jazzy-ros-base ros-dev-tools python3-pip -y
 python3 -m pip config set global.break-system-packages true # Disable externally-managed-environment error
 pip install setuptools==70.0.0
 mkdir -p ~/ros2_ws/src && cd ~/ros2_ws
@@ -214,7 +216,7 @@ echo 'source /opt/ros/jazzy/setup.bash
 source /home/ubuntu/ros2_ws/install/setup.bash
 source /home/ubuntu/uros_ws/install/local_setup.bash
 
-export ROS_DOMAIN_ID=0
+# export ROS_DOMAIN_ID=0 # moved to ament_environment_hooks; do not set domain id here (mechaship_bringup/hooks/mechaship_bringup.sh.in)
 
 alias cb="cd ~/ros2_ws && colcon build --symlink-install && source ~/ros2_ws/install/local_setup.bash"' >> ${chroot_dir}/home/ubuntu/ros2_setup.bash
 echo "source ~/ros2_setup.bash" >> ${chroot_dir}/home/ubuntu/.bashrc
@@ -239,8 +241,9 @@ chmod 777 ${chroot_dir}/home/ubuntu/temp/install_uros.sh
 chroot_run_ubuntu "./temp/install_uros.sh"
 
 # Udev
-echo '# RP2040 MCU
-KERNEL=="ttyACM*", ATTRS{idVendor}=="2e8a", MODE="0666", GROUP="dialout", SYMLINK+="ttyMCU"
+echo '# Main Circuit
+KERNEL=="ttyACM*", ATTRS{bInterfaceNumber}=="00", MODE="0666", GROUP="dialout", SYMLINK+="ttyUROS"
+KERNEL=="ttyACM*", ATTRS{bInterfaceNumber}=="02", MODE="0666", GROUP="dialout", SYMLINK+="ttyMCU"
 
 # GNSS (GPS)
 KERNEL=="ttyACM*", ATTRS{idVendor}=="1546", MODE="0666", GROUP="dialout", SYMLINK+="ttyGPS"
@@ -261,20 +264,20 @@ source ~/ros2_setup.bash
 DEBIAN_FRONTEND=noninteractive
 set -e
 
-sudo apt-fast install -y ros-jazzy-usb-cam ros-jazzy-robot-localization ros-jazzy-slam-toolbox ros-jazzy-vision-msgs ros-jazzy-cartographer ros-jazzy-cartographer-ros ros-jazzy-ros-gz ros-jazzy-cv-bridge ros-jazzy-ublox-gps
+sudo apt-get install -y ros-jazzy-usb-cam ros-jazzy-robot-localization ros-jazzy-slam-toolbox ros-jazzy-vision-msgs ros-jazzy-cartographer ros-jazzy-cartographer-ros ros-jazzy-ros-gz ros-jazzy-cv-bridge ros-jazzy-ublox-gps
 git clone https://github.com/YDLIDAR/YDLidar-SDK
 cd YDLidar-SDK
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
 sudo make install
-cd ~/ros2_ws/src
-git clone --recurse-submodules https://github.com/mechasolution/mechaship.git
-cd ~/ros2_ws && colcon build --symlink-install
+git clone --recurse-submodules https://github.com/mechasolution/mechaship.git ~/ros2_ws/src
+cd ~/ros2_ws
+rosdep install --from-paths src --ignore-src -y --skip-keys=cmake_modules # TODO: remove skip-keys after fix rf2o_laser_odometry dependency problem
+colcon build --symlink-install
 ' >> ${chroot_dir}/home/ubuntu/temp/install_ydlidar_driver.sh
 chmod 777 ${chroot_dir}/home/ubuntu/temp/install_ydlidar_driver.sh
 chroot_run_ubuntu "./temp/install_ydlidar_driver.sh"
-chroot_run_ubuntu "sudo chmod a+s /usr/sbin/poweroff"
 
 # Service unit
 mkdir -p ${chroot_dir}/home/ubuntu/.mechaship_system_service
@@ -305,7 +308,7 @@ DEBIAN_FRONTEND=noninteractive
 set -e
 
 # git clone https://github.com/airockchip/rknn-toolkit2/
-sudo apt-fast install python3-dev python3-pip gcc python3-opencv python3-numpy -y
+sudo apt-get install python3-dev python3-pip gcc python3-opencv python3-numpy -y
 pip3 install ~/temp/rknn_toolkit_lite2-2.3.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
 sudo cp ~/temp/librknnrt.so /usr/lib/.
 ' >> ${chroot_dir}/home/ubuntu/temp/install_rknn.sh
@@ -313,7 +316,7 @@ chmod 777 ${chroot_dir}/home/ubuntu/temp/install_rknn.sh
 chroot_run_ubuntu "./temp/install_rknn.sh"
 
 # Roll back local mirror
-chroot_run "sed -i 's|http://krr.ports.ubuntu.com/ubuntu-ports|http://kr.ports.ubuntu.com|g' /etc/apt/sources.list"
+chroot_run "sed -i 's|http://krr.ports.ubuntu.com/ubuntu-ports|http://kr.ports.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources"
 chroot_run "sed -i 's|http://krr.packages.ros.org/ros2/ubuntu|http://packages.ros.org/ros2/ubuntu|g' /etc/apt/sources.list.d/ros2.list"
 
 # Remove packages
