@@ -240,18 +240,17 @@ chmod 777 ${chroot_dir}/home/ubuntu/temp/install_uros.sh
 chroot_run_ubuntu "./temp/install_uros.sh"
 
 # Udev
-echo '# Main Circuit
-KERNEL=="ttyACM*", ATTRS{bInterfaceNumber}=="00", MODE="0666", GROUP="dialout", SYMLINK+="ttyUROS"
-KERNEL=="ttyACM*", ATTRS{bInterfaceNumber}=="02", MODE="0666", GROUP="dialout", SYMLINK+="ttyMCU"
+echo '# RP2040 MCU
+KERNEL=="ttyACM*", ATTRS{idVendor}=="2e8a", MODE="0666", GROUP="dialout", SYMLINK+="ttyMCU"
 
 # GNSS (GPS)
 KERNEL=="ttyACM*", ATTRS{idVendor}=="1546", MODE="0666", GROUP="dialout", SYMLINK+="ttyGPS"
 
 # LiDAR
-KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty", KERNELS=="1-1", SYMLINK+="ttyLiDAR"
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0200", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyLiDAR"
 
 # IMU
-KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty", KERNELS=="6-1", SYMLINK+="ttyIMU"
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0100", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyIMU"
 
 # Camera
 KERNEL=="video*", ATTR{index}=="0", MODE="0666", SYMLINK+="videoRGBCAMERA0"
@@ -270,7 +269,10 @@ mkdir build && cd build
 cmake ..
 make -j$(nproc)
 sudo make install
-git clone --recurse-submodules https://github.com/mechasolution/mechaship.git ~/ros2_ws/src
+git clone https://github.com/mechasolution/mechaship.git ~/ros2_ws/src/mechaship 
+cd ~/ros2_ws/src/mechaship
+git checkout f5e33bc
+git submodule update --init --recursive
 cd ~/ros2_ws
 rosdep install --from-paths src --ignore-src -y --skip-keys=cmake_modules # TODO: remove skip-keys after fix rf2o_laser_odometry dependency problem
 colcon build --symlink-install
@@ -287,8 +289,10 @@ Description=Mechaship System
 After=network.target
 
 [Service]
-WorkingDirectory=/home/ubuntu/.mechaship_system_service
-ExecStart=/usr/bin/python3 mcu_service.py
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu
+ExecStart=/bin/bash -lc "source /home/ubuntu/ros2_setup.bash && ros2 launch mechaship_system mechaship_system_service.launch.py"
 RemainAfterExit=no
 Restart=on-failure
 RestartSec=2s
