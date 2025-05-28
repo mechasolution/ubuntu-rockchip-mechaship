@@ -73,7 +73,7 @@ chroot_dir=rootfs
 # Compress the root filesystem and then build a disk image
 cd build
 
-cd ${chroot_dir} && tar -cpf "../mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64-${BOARD}.rootfs.tar" . && cd .. && rm -rf ${chroot_dir}
+cd ${chroot_dir} && tar -cpf "../mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64-${BOARD}.rootfs.tar" . && cd .. # && rm -rf ${chroot_dir}
 ../scripts/build-image.sh "mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64-${BOARD}.rootfs.tar"
 rm -f "mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64-${BOARD}.rootfs.tar"
 
