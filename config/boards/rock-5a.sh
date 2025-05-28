@@ -17,7 +17,16 @@ function config_image_hook__rock-5a() {
 
     if [ "${suite}" == "jammy" ] || [ "${suite}" == "noble" ]; then
         # Install panfork
-        chroot "${rootfs}" add-apt-repository -y ppa:jjriek/panfork-mesa
+        
+        # use local mirror
+        list_file="${rootfs}/etc/apt/sources.list.d/extra-ppas.list"
+        line_to_add='deb http://krr.ppa.launchpadcontent.net/jjriek/panfork-mesa/ubuntu noble main'
+
+        # 줄이 이미 존재하는지 확인하고 없으면 추가
+        if ! grep -Fxq "$line_to_add" "$list_file"; then
+            echo "$line_to_add" >> "$list_file"
+        fi
+
         chroot "${rootfs}" apt-get update
         chroot "${rootfs}" apt-get -y install mali-g610-firmware
         chroot "${rootfs}" apt-get -y dist-upgrade

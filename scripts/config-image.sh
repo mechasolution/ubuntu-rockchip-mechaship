@@ -140,11 +140,10 @@ tar -xpJf "mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootf
 setup_mountpoint $chroot_dir
 
 # Change to local mirror & DNS server
+chroot_run "sed -i 's|http://ppa.launchpad.net|http://krr.ppa.launchpad.net|g' /etc/apt/sources.list.d/extra-ppas.list"
 chroot_run "sed -i 's|http://ports.ubuntu.com|http://krr.ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list.d/ubuntu.sources"
 chroot_run "sed -i 's|^\(nameserver[[:space:]]*\).*|\1 192.168.1.11|' /etc/resolv.conf"
 
-chroot_run "apt-get update"
-    
 # Run config hook to handle board specific changes
 if [[ $(type -t config_image_hook__"${BOARD}") == function ]]; then
     config_image_hook__"${BOARD}" "${chroot_dir}" "${overlay_dir}" "${SUITE}"
@@ -316,6 +315,7 @@ chmod 777 ${chroot_dir}/home/ubuntu/temp/install_rknn.sh
 chroot_run_ubuntu "./temp/install_rknn.sh"
 
 # Roll back local mirror
+chroot_run "sed -i 's|http://krr.ppa.|http://ppa.|g' /etc/apt/sources.list.d/extra-ppas.list"
 chroot_run "sed -i 's|http://krr.ports.ubuntu.com/ubuntu-ports|http://kr.ports.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources"
 chroot_run "sed -i 's|http://krr.packages.ros.org/ros2/ubuntu|http://packages.ros.org/ros2/ubuntu|g' /etc/apt/sources.list.d/ros2.list"
 
