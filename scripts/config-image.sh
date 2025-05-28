@@ -270,7 +270,7 @@ mkdir build && cd build
 cmake ..
 make -j$(nproc)
 sudo make install
-git clone --recurse-submodules https://github.com/mechasolution/mechaship.git ~/ros2_ws/src
+git clone --recurse-submodules https://github.com/mechasolution/mechaship.git ~/ros2_ws/src/mechaship
 cd ~/ros2_ws
 rosdep install --from-paths src --ignore-src -y --skip-keys=cmake_modules # TODO: remove skip-keys after fix rf2o_laser_odometry dependency problem
 colcon build --symlink-install
