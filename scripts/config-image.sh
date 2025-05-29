@@ -292,8 +292,8 @@ chroot_run_ubuntu "./temp/install_uros.sh"
 
 # Udev
 echo '# Main Circuit
-KERNEL=="ttyACM*", ATTRS{bInterfaceNumber}=="00", MODE="0666", GROUP="dialout", SYMLINK+="ttyUROS"
-KERNEL=="ttyACM*", ATTRS{bInterfaceNumber}=="02", MODE="0666", GROUP="dialout", SYMLINK+="ttyMCU"
+KERNEL=="ttyACM*", ATTRS{interface}=="MechaShip Motherboard CDC", ATTRS{bInterfaceNumber}=="00", MODE="0666", GROUP="dialout", SYMLINK+="ttyUROS"
+KERNEL=="ttyACM*", ATTRS{interface}=="MechaShip Motherboard CDC", ATTRS{bInterfaceNumber}=="02", MODE="0666", GROUP="dialout", SYMLINK+="ttyMCU"
 
 # GNSS (GPS)
 KERNEL=="ttyACM*", ATTRS{idVendor}=="1546", MODE="0666", GROUP="dialout", SYMLINK+="ttyGPS"
