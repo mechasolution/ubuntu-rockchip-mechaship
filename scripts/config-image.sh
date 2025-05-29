@@ -182,6 +182,50 @@ ssh_deletekeys: false
 ssh_genkeytypes: []' >> ${chroot_dir}/etc/cloud/cloud.cfg.d/91-disable-default-user.cfg
 chroot_run_ubuntu "mkdir temp"
 
+# add default wifi ap to connect
+echo '
+write_files:
+- path: /etc/cloud/cloud.cfg.d/99-custom-networking.cfg
+  permissions: '0644'
+  content: |
+    network: {config: disabled}
+- path: /etc/netplan/my-new-config.yaml
+  permissions: '0644'
+  content: |
+    network:
+      version: 2
+      renderer: NetworkManager
+      ethernets:
+        zz-all-en:
+          match:
+            name: "en*"
+          optional: true
+          dhcp4: true
+        zz-all-eth:
+          match:
+            name: "eth*"
+          optional: true
+          dhcp4: true
+      wifis:
+        zz-all-wifi:
+          match:
+            name: "wl*"
+          dhcp4: true
+          dhcp6: true
+          access-points:
+            "iptime-Tech_5":
+              auth:
+                key-management: "psk"
+                password: "mecha@123"
+            "iptime-Tech_2_4":
+              auth:
+                key-management: "psk"
+                password: "mecha@123"
+runcmd:
+ - rm /etc/netplan/50-cloud-init.yaml
+ - netplan generate
+ - netplan apply' >> ${chroot_dir}/etc/cloud/cloud.cfg
+
 # pre-generate ssh key
 chroot_run mkdir -p /etc/ssh
 chroot_run ssh-keygen -A
