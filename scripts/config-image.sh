@@ -213,14 +213,15 @@ write_files:
           dhcp4: true
           dhcp6: true
           access-points:
+            "mechasolution_5":
+              auth:
+                key-management: "psk"
+                password: "mechaship@123"
             "iptime-Tech_5":
               auth:
                 key-management: "psk"
                 password: "mecha@123"
-            "iptime-Tech_2_4":
-              auth:
-                key-management: "psk"
-                password: "mecha@123"
+
 runcmd:
  - rm /etc/netplan/50-cloud-init.yaml
  - netplan generate
