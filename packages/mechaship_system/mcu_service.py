@@ -2,16 +2,32 @@ import os
 import re
 import subprocess
 import time
+import socket
+import stat
 
 import psutil
 import serial
 
 
 class McuService:
+    SOCK_PATH = "/tmp/battery.sock"
+
     def __init__(self):
         self.last_check_time = 0
         self.last_percentage = 100
+        self.battery_voltage = -1.0
+        self.battery_percentage = -1.0
         self.IP_ADDR_FAIL = [0, 0, 0, 0]
+
+        if os.path.exists(self.SOCK_PATH):
+            os.remove(self.SOCK_PATH)
+
+        self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.server.bind(self.SOCK_PATH)
+        self.server.listen(1)
+        self.server.settimeout(0.1)
+
+        os.chmod(self.SOCK_PATH, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
     def __find_ip_interface(self) -> str:
         try:
@@ -62,7 +78,10 @@ class McuService:
 
         if sp[0] == "$BT":  # 배터리 잔량
             current_time = time.time()
+            voltage = float(sp[1])
             percentage = float(sp[2])
+            self.battery_voltage = voltage
+            self.battery_percentage = percentage
 
             if (
                 current_time - self.last_check_time >= 300
@@ -116,7 +135,20 @@ def main():
                 ser = mcu_service.connect_serial()
                 last_ip_send_time = time.time() - 4  # 재연결 후 1초 뒤 전송
 
-            time.sleep(0.1)
+            try:
+                conn, _ = mcu_service.server.accept()
+                data = conn.recv(1024).decode()
+                if data.strip() == "get_battery":
+                    conn.send(
+                        f"Battery: {mcu_service.battery_voltage:.1f} V / {mcu_service.battery_percentage:.0f} %\n".encode()
+                    )
+                conn.close()
+
+            except socket.timeout:
+                pass
+
+            else:
+                time.sleep(0.1)
 
     except KeyboardInterrupt:
         pass
