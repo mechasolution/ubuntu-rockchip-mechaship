@@ -303,7 +303,7 @@ KERNEL=="ttyACM*", ATTRS{idVendor}=="1546", MODE="0666", GROUP="dialout", SYMLIN
 KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0200", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyLiDAR"
 
 # IMU
-KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0100", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyIMU"
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", ATTRS{bcdDevice}=="8134", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyIMU"
 
 # Camera
 KERNEL=="video*", ATTR{index}=="0", MODE="0666", SYMLINK+="videoRGBCAMERA0"
