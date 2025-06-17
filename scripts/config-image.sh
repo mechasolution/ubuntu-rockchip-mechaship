@@ -169,17 +169,14 @@ fi
 # Update the initramfs
 chroot ${chroot_dir} update-initramfs -u
 
-# create user & do not create user on cloud-init & do not generate ssh key on cloud-init
+# create user & do not create user on cloud-init
 chroot_run "adduser --gecos ",,," --disabled-password ubuntu"
 chroot_run "sh -c 'echo "ubuntu:ubuntu" | chpasswd'"
 chroot_run "usermod -aG sudo,dialout ubuntu"
 chroot_run "echo \"ubuntu ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
 echo '#cloud-config
 system_info:
-  default_user: {}
-  
-ssh_deletekeys: false
-ssh_genkeytypes: []' >> ${chroot_dir}/etc/cloud/cloud.cfg.d/91-disable-default-user.cfg
+  default_user: {}' >> ${chroot_dir}/etc/cloud/cloud.cfg.d/91-disable-default-user.cfg
 chroot_run_ubuntu "mkdir temp"
 
 # add default wifi ap to connect
@@ -209,10 +206,6 @@ network:
       networkmanager:
         uuid: "370a22f3-2193-441b-9174-c1be89b425f2"
         name: "mechasolution_5"' >> ${chroot_dir}/etc/netplan/90-NM-370a22f3-2193-441b-9174-c1be89b425f2.yaml
-
-# pre-generate ssh key
-chroot_run mkdir -p /etc/ssh
-chroot_run ssh-keygen -A
 
 # Update packages, 네트워크 툴 설치
 chroot_run "apt-get update"
