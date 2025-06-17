@@ -184,48 +184,31 @@ chroot_run_ubuntu "mkdir temp"
 
 # add default wifi ap to connect
 echo '
-write_files:
-- path: /etc/cloud/cloud.cfg.d/99-custom-networking.cfg
-  permissions: '0644'
-  content: |
-    network: {config: disabled}
-- path: /etc/netplan/my-new-config.yaml
-  permissions: '0644'
-  content: |
-    network:
-      version: 2
+network:
+  version: 2
+  wifis:
+    NM-370a22f3-2193-441b-9174-c1be89b425f2:
       renderer: NetworkManager
-      ethernets:
-        zz-all-en:
-          match:
-            name: "en*"
-          optional: true
-          dhcp4: true
-        zz-all-eth:
-          match:
-            name: "eth*"
-          optional: true
-          dhcp4: true
-      wifis:
-        zz-all-wifi:
-          match:
-            name: "wl*"
-          dhcp4: true
-          dhcp6: true
-          access-points:
-            "mechasolution_5":
-              auth:
-                key-management: "psk"
-                password: "mechaship@123"
-            "iptime-Tech_5":
-              auth:
-                key-management: "psk"
-                password: "mecha@123"
-
-runcmd:
- - rm /etc/netplan/50-cloud-init.yaml
- - netplan generate
- - netplan apply' >> ${chroot_dir}/etc/cloud/cloud.cfg
+      match:
+        name: "wlP4p65s0"
+      dhcp4: true
+      dhcp6: true
+      access-points:
+        "mechasolution_5":
+          auth:
+            key-management: "psk"
+            password: "mechaship@123"
+          networkmanager:
+            uuid: "370a22f3-2193-441b-9174-c1be89b425f2"
+            name: "mechasolution_5"
+            passthrough:
+              wifi-security.auth-alg: "open"
+              ipv6.addr-gen-mode: "default"
+              ipv6.ip6-privacy: "-1"
+              proxy._: ""
+      networkmanager:
+        uuid: "370a22f3-2193-441b-9174-c1be89b425f2"
+        name: "mechasolution_5"' >> ${chroot_dir}/etc/netplan/90-NM-370a22f3-2193-441b-9174-c1be89b425f2.yaml
 
 # pre-generate ssh key
 chroot_run mkdir -p /etc/ssh
