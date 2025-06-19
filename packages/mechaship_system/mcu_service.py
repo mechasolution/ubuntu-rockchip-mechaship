@@ -1,9 +1,9 @@
 import os
 import re
-import subprocess
-import time
 import socket
 import stat
+import subprocess
+import time
 
 import psutil
 import serial
