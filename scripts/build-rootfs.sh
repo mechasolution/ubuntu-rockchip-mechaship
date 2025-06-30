@@ -144,3 +144,4 @@ set -eE
 # Tar the entire rootfs
 (cd chroot/ &&  tar -p -c --sort=name --xattrs ./*) | xz -3 -T0 > "mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootfs.tar.xz"
 mv "mechaship-ubuntu-${RELASE_VERSION}-preinstalled-${FLAVOR}-arm64.rootfs.tar.xz" ../
+rm -rf ../live-build
