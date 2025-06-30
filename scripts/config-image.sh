@@ -316,6 +316,7 @@ cp ../packages/mechaship_system/mcu_service.py ${chroot_dir}/home/ubuntu/.mechas
 
 # battery custom command
 cp ../packages/mechaship_system/mechaship_battery.sh ${chroot_dir}/home/ubuntu/.mechaship_system_service/.
+cp ../packages/mechaship_system/mechaship_mcu_info.sh ${chroot_dir}/home/ubuntu/.mechaship_system_service/.
 chroot_run "apt-get install -y socat"
 chroot_run "ln -s /home/ubuntu/.mechaship_system_service/mechaship_battery.sh /usr/local/bin/mechaship_battery"
 chroot_run "chmod 755 /usr/local/bin/mechaship_battery"

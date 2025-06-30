@@ -4,30 +4,44 @@ import socket
 import stat
 import subprocess
 import time
+from datetime import datetime
 
 import psutil
 import serial
 
 
 class McuService:
-    SOCK_PATH = "/tmp/battery.sock"
+    SOCK_PATH_BATTERY = "/tmp/mechaship_battery.sock"
+    SOCK_PATH_MCU_INFO = "/tmp/mechaship_mcu_info.sock"
+    IP_ADDR_FAIL = [0, 0, 0, 0]
 
     def __init__(self):
         self.last_check_time = 0
         self.last_percentage = 100
         self.battery_voltage = -1.0
         self.battery_percentage = -1.0
-        self.IP_ADDR_FAIL = [0, 0, 0, 0]
+        self.build_date = "Unknown"
+        self.build_hash = "Unknown"
 
-        if os.path.exists(self.SOCK_PATH):
-            os.remove(self.SOCK_PATH)
+        if os.path.exists(self.SOCK_PATH_BATTERY):
+            os.remove(self.SOCK_PATH_BATTERY)
 
-        self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.server.bind(self.SOCK_PATH)
-        self.server.listen(1)
-        self.server.settimeout(0.1)
+        self.battery_sock_server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.battery_sock_server.bind(self.SOCK_PATH_BATTERY)
+        self.battery_sock_server.listen(1)
+        self.battery_sock_server.settimeout(0.1)
 
-        os.chmod(self.SOCK_PATH, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+        os.chmod(self.SOCK_PATH_BATTERY, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+
+        if os.path.exists(self.SOCK_PATH_MCU_INFO):
+            os.remove(self.SOCK_PATH_MCU_INFO)
+
+        self.mcu_info_sock_server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.mcu_info_sock_server.bind(self.SOCK_PATH_MCU_INFO)
+        self.mcu_info_sock_server.listen(1)
+        self.mcu_info_sock_server.settimeout(0.1)
+
+        os.chmod(self.SOCK_PATH_MCU_INFO, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
     def __find_ip_interface(self) -> str:
         try:
@@ -42,7 +56,6 @@ class McuService:
             else:
                 return ""
         except subprocess.CalledProcessError as e:
-            print(f"Error getting default interface: {e}")
             return ""
 
     def get_ip_addr(self) -> list:
@@ -69,6 +82,8 @@ class McuService:
                     timeout=timeout,
                     write_timeout=write_timeout,
                 )
+                ip_message = f"$IN\r\n"
+                ser.write(ip_message.encode())
                 return ser
             except serial.SerialException as e:
                 time.sleep(1)
@@ -107,6 +122,11 @@ class McuService:
 
             os.system("/usr/sbin/poweroff")
 
+        elif sp[0] == "$IN":  # 펌웨어 정보
+            datetime_str = f"{sp[1]} {sp[2]}"
+            self.build_date = datetime.strptime(datetime_str, "%b %d %Y %H:%M:%S")
+            self.build_hash = sp[3]
+
 
 def main():
     mcu_service = McuService()
@@ -136,11 +156,23 @@ def main():
                 last_ip_send_time = time.time() - 4  # 재연결 후 1초 뒤 전송
 
             try:
-                conn, _ = mcu_service.server.accept()
+                conn, _ = mcu_service.battery_sock_server.accept()
                 data = conn.recv(1024).decode()
                 if data.strip() == "get_battery":
                     conn.send(
                         f"Battery: {mcu_service.battery_voltage:.1f} V / {mcu_service.battery_percentage:.0f} %\n".encode()
+                    )
+                conn.close()
+
+            except socket.timeout:
+                pass
+
+            try:
+                conn, _ = mcu_service.mcu_info_sock_server.accept()
+                data = conn.recv(1024).decode()
+                if data.strip() == "get_mcu_info":
+                    conn.send(
+                        f"FW Version: {mcu_service.build_date}\nFW Hash: {mcu_service.build_hash}\n".encode()
                     )
                 conn.close()
 
