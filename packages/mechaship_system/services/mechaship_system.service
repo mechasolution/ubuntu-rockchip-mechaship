@@ -1,0 +1,13 @@
+[Unit]
+Description=Mechaship System
+After=network.target
+
+[Service]
+WorkingDirectory=/home/ubuntu/.mechaship_system_service
+ExecStart=/usr/bin/python3 mcu_service.py
+RemainAfterExit=no
+Restart=on-failure
+RestartSec=2s
+
+[Install]
+WantedBy=multi-user.target

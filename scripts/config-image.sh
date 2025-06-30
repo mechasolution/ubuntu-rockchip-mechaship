@@ -303,31 +303,16 @@ colcon build --symlink-install
 chmod 777 ${chroot_dir}/home/ubuntu/temp/install_ydlidar_driver.sh
 chroot_run_ubuntu "./temp/install_ydlidar_driver.sh"
 
-# Service unit
-mkdir -p ${chroot_dir}/home/ubuntu/.mechaship_system_service
-cp ../packages/mechaship_system/mcu_service.py ${chroot_dir}/home/ubuntu/.mechaship_system_service/.
+# System service
+cp -r ../packages/mechaship_system/.mechaship_system_service ${chroot_dir}/home/ubuntu/.
+cp -r  ../packages/mechaship_system/services/* ${chroot_dir}/etc/systemd/system/.
 
-# battery custom command
-cp ../packages/mechaship_system/mechaship_battery.sh ${chroot_dir}/home/ubuntu/.mechaship_system_service/.
-cp ../packages/mechaship_system/mechaship_mcu_info.sh ${chroot_dir}/home/ubuntu/.mechaship_system_service/.
+chroot_run_ubuntu "sudo systemctl enable mechaship_system.service"
+chroot_run_ubuntu "sudo systemctl enable mechaship_power_off.service"
+
 chroot_run "apt-get install -y socat"
 chroot_run "ln -s /home/ubuntu/.mechaship_system_service/mechaship_battery.sh /usr/local/bin/mechaship_battery"
 chroot_run "chmod 755 /usr/local/bin/mechaship_battery"
-
-echo '[Unit]
-Description=Mechaship System
-After=network.target
-
-[Service]
-WorkingDirectory=/home/ubuntu/.mechaship_system_service
-ExecStart=/usr/bin/python3 mcu_service.py
-RemainAfterExit=no
-Restart=on-failure
-RestartSec=2s
-
-[Install]
-WantedBy=multi-user.target' | sudo tee ${chroot_dir}/etc/systemd/system/mechaship_system.service > /dev/null
-chroot_run_ubuntu "sudo systemctl enable mechaship_system.service"
 
 # RKNN
 cp -r ../packages/rknn-toolkit2/rknn_toolkit_lite2-2.3.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl ${chroot_dir}/home/ubuntu/temp/.
