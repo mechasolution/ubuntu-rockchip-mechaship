@@ -169,6 +169,9 @@ fi
 # Update the initramfs
 chroot ${chroot_dir} update-initramfs -u
 
+# custom device tree
+dtc -I dts -O dtb -f ../packages/devicetree/rk3588s-rock-5a.dts -o ${chroot_dir}/usr/lib/firmware/6.1.0-1025-rockchip/device-tree/rockchip/rk3588s-rock-5a.dtb
+
 # create user & do not create user on cloud-init
 chroot_run "adduser --gecos ",,," --disabled-password ubuntu"
 chroot_run "sh -c 'echo "ubuntu:ubuntu" | chpasswd'"
