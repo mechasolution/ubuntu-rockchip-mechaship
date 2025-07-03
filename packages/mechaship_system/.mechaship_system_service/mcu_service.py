@@ -21,8 +21,8 @@ class McuService:
         self.battery_percentage = -1.0
         self.build_date = "Unknown"
         self.build_hash = "Unknown"
-        self.domain_id_mcu = 0
-        self.domain_id_sbc = 0
+        self.domain_id_mcu = -1
+        self.domain_id_sbc = -1
         self.domain_id_warn = False
 
         if os.path.exists(self.SOCK_PATH):
@@ -76,6 +76,16 @@ class McuService:
                 )
                 ip_message = f"$IN\r\n"
                 ser.write(ip_message.encode())
+
+                # reinit variables
+                self.battery_voltage = -1.0
+                self.battery_percentage = -1.0
+                self.build_date = "Unknown"
+                self.build_hash = "Unknown"
+                self.domain_id_mcu = -1
+                self.domain_id_sbc = -1
+                self.domain_id_warn = False
+
                 return ser
             except serial.SerialException as e:
                 time.sleep(1)
@@ -121,6 +131,7 @@ class McuService:
 
         elif sp[0] == "$ID":  # DOMAIN ID
             self.domain_id_mcu = int(sp[1])
+
             result = subprocess.run(
                 [
                     "bash",
@@ -131,17 +142,12 @@ class McuService:
                 text=True,
             )
             self.domain_id_sbc = int(result.stdout.strip())
-            if self.domain_id_mcu != self.domain_id_sbc:
-                self.domain_id_warn = True
-            else:
-                self.domain_id_warn = False
 
 
 def main():
     mcu_service = McuService()
     ser = mcu_service.connect_serial()
     last_ip_send_time = 0
-    last_domain_id_time = 0
 
     try:
         while True:
@@ -160,21 +166,6 @@ def main():
                     r = ser.readline().strip().decode()
                     mcu_service.parse_rx(r)
 
-                # Domain ID 경고
-                if mcu_service.domain_id_warn is True:
-                    if current_time - last_domain_id_time >= 60:
-                        last_domain_id_time = current_time
-                        message = (
-                            f"⚠️ [ROS_DOMAIN_ID 경고]\n"
-                            f"메인보드와 SBC의 ROS_DOMAIN_ID가 서로 일치하지 않습니다.\n"
-                            f"  - 메인보드: {mcu_service.domain_id_mcu}\n"
-                            f"  - SBC: {mcu_service.domain_id_sbc}\n"
-                            f"패키지에서 ROS_DOMAIN_ID를 변경한 후 빌드까지 진행해주세요.\n"
-                        )
-                        subprocess.run(["wall", message])
-                else:
-                    last_domain_id_time = 0
-
             except (serial.SerialException, OSError) as e:
                 ser.close()
                 ser = mcu_service.connect_serial()
@@ -189,11 +180,15 @@ def main():
                     )
                 elif data.strip() == "get_mcu_info":
                     conn.send(
-                        f"FW Version: {mcu_service.build_date}\nFW Hash: {mcu_service.build_hash}\n".encode()
+                        f"FW Version: {mcu_service.build_date}\nFW Hash: {mcu_service.build_hash}\nROS_DOMAIN_ID(SBC): {mcu_service.domain_id_sbc}\nROS_DOMAIN_ID(MCU): {mcu_service.domain_id_mcu}\n".encode()
                     )
+                elif data.strip() == "get_mcu_ros_domain_id":
+                    conn.send(f"{mcu_service.domain_id_mcu}".encode())
                 conn.close()
 
             except socket.timeout:
+                pass
+            except BrokenPipeError:
                 pass
 
             else:
