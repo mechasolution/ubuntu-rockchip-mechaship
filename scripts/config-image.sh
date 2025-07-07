@@ -183,32 +183,7 @@ system_info:
 chroot_run_ubuntu "mkdir temp"
 
 # add default wifi ap to connect
-echo '
-network:
-  version: 2
-  wifis:
-    NM-370a22f3-2193-441b-9174-c1be89b425f2:
-      renderer: NetworkManager
-      match:
-        name: "wlP4p65s0"
-      dhcp4: true
-      dhcp6: true
-      access-points:
-        "mechasolution_5":
-          auth:
-            key-management: "psk"
-            password: "mechaship@123"
-          networkmanager:
-            uuid: "370a22f3-2193-441b-9174-c1be89b425f2"
-            name: "mechasolution_5"
-            passthrough:
-              wifi-security.auth-alg: "open"
-              ipv6.addr-gen-mode: "default"
-              ipv6.ip6-privacy: "-1"
-              proxy._: ""
-      networkmanager:
-        uuid: "370a22f3-2193-441b-9174-c1be89b425f2"
-        name: "mechasolution_5"' >> ${chroot_dir}/etc/netplan/90-NM-370a22f3-2193-441b-9174-c1be89b425f2.yaml
+cp ../packages/netplan/* ${chroot_dir}/etc/netplan/.
 
 # Update packages, 네트워크 툴 설치
 chroot_run "apt-get update"
