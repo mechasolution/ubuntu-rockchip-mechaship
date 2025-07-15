@@ -273,7 +273,7 @@ mkdir build && cd build
 cmake ..
 make -j$(nproc)
 sudo make install
-git clone --recurse-submodules -b jazzy-uipa https://github.com/mechasolution/mechaship.git ~/ros2_ws/src/mechaship
+git clone --recurse-submodules -b jazzy https://github.com/mechasolution/mechaship.git ~/ros2_ws/src/mechaship
 cd ~/ros2_ws
 rosdep install --from-paths src --ignore-src -y --skip-keys=ros_wit_imu_node
 colcon build --symlink-install
