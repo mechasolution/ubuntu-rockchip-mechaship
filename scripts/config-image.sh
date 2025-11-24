@@ -203,7 +203,6 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 sudo apt update
 sudo apt-get install ros-jazzy-ros-base ros-dev-tools python3-pip -y
 python3 -m pip config set global.break-system-packages true # Disable externally-managed-environment error
-pip install setuptools==70.0.0
 mkdir -p ~/ros2_ws/src && cd ~/ros2_ws
 colcon build
 cd
