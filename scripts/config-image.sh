@@ -287,7 +287,8 @@ cp -r  ../packages/mechaship_system/services/* ${chroot_dir}/etc/systemd/system/
 chroot_run_ubuntu "sudo systemctl enable mechaship_system.service"
 chroot_run_ubuntu "sudo systemctl enable mechaship_power_off.service"
 
-chroot_run "apt-get install -y socat"
+chroot_run "apt-get install -y socat iw"
+chroot_run "pip install ping3 --break-system-packages"
 chroot_run "ln -s /home/ubuntu/.mechaship_system_service/mechaship_battery.sh /usr/local/bin/mechaship_battery"
 chroot_run "chmod 755 /usr/local/bin/mechaship_battery"
 

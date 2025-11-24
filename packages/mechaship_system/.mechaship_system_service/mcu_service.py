@@ -5,9 +5,18 @@ import stat
 import subprocess
 import time
 from datetime import datetime
+from typing import NamedTuple
 
+import ping3
 import psutil
 import serial
+
+
+class InterfaceInfo(NamedTuple):
+    connect_method: str
+    ssid: str
+    rssi: int
+    frequency: int
 
 
 class McuService:
@@ -35,33 +44,144 @@ class McuService:
 
         os.chmod(self.SOCK_PATH, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
-    def __find_ip_interface(self) -> str:
+        self.network_connection_method = "NONE"  # LAN/WLAN/NONE
+        self.network_interface_name = ""  # wlP4p65s0 등
+        self.network_ip_addr = self.IP_ADDR_FAIL
+        self.network_ip_addr_router = self.IP_ADDR_FAIL
+        self.network_ssid = ""
+        self.network_rssi = 0
+        self.network_frequency = 0
+        self.network_ping = 0.0
+
+        self.is_req_iw = False
+        self.is_req_ping = False
+
+    def update_network_info(self):
+        # 인터페이스, IP
         try:
             result = subprocess.run(
                 ["ip", "route"], capture_output=True, text=True, check=True
             )
             output = result.stdout
 
-            match = re.search(r"^default .* dev (\S+)", output, re.MULTILINE)
+            match = re.search(
+                r"^default\s+via\s+(\S+)\s+dev\s+(\S+).*?\bsrc\s+(\d+\.\d+\.\d+\.\d+)",
+                output,
+                re.MULTILINE,
+            )
             if match:
-                return match.group(1)
+                self.network_ip_addr_router = list(map(int, match.group(1).split(".")))
+                self.network_interface_name = match.group(2)
+                self.network_ip_addr = list(map(int, match.group(3).split(".")))
             else:
-                return ""
-        except subprocess.CalledProcessError as e:
-            return ""
+                self.network_connection_method = "NONE"
+                self.network_interface_name = ""
+                self.network_ip_addr = self.IP_ADDR_FAIL
+                self.network_ip_addr_router = self.IP_ADDR_FAIL
+                self.network_ssid = ""
+                self.network_rssi = 0
+                self.network_frequency = 0
+                return
+
+        except subprocess.CalledProcessError:
+            self.network_connection_method = "NONE"
+            self.network_interface_name = ""
+            self.network_ip_addr = self.IP_ADDR_FAIL
+            self.network_ip_addr_router = self.IP_ADDR_FAIL
+            self.network_ssid = ""
+            self.network_rssi = 0
+            self.network_frequency = 0
+
+        # Wi-Fi인지 유선인지 확인
+        if os.path.isdir(f"/sys/class/net/{self.network_interface_name}/wireless"):
+            self.network_connection_method = "WLAN"
+        else:
+            self.network_connection_method = "LAN"
+            self.network_ssid = ""
+            self.network_rssi = 0
+            self.network_frequency = 0
+            return
+
+        # 네트워크 정보 파싱
+        try:
+            result = subprocess.run(
+                ["iw", "dev", self.network_interface_name, "link"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            output = result.stdout
+            # SSID
+            ssid_match = re.search(r"SSID:\s(.+)", output)
+            if ssid_match:
+                self.network_ssid = ssid_match.group(1).strip()
+            else:
+                self.network_ssid = "**Unknown**"
+
+            # RSSI dBm (signal)
+            signal_match = re.search(r"signal:\s(-?\d+)", output)
+            if signal_match:
+                self.network_rssi = int(signal_match.group(1))
+                # quality = 2 * (int(signal_match.group(1)) + 100)
+                # self.network_rssi = max(0, min(100, quality))
+            else:
+                self.network_rssi = 0
+
+            # frequency -> channel
+            freq_match = re.search(r"freq:\s(\d+)", output)
+            if freq_match:
+                self.network_frequency = int(freq_match.group(1))
+            else:
+                self.network_frequency = 0
+
+        except subprocess.CalledProcessError:
+            self.network_ssid = "**Unknown**"
+            self.network_rssi = 0
+            self.network_frequency = 0
+            return
+
+        return
+
+    def get_ping_ms(self) -> float:
+        if self.network_ip_addr_router == self.IP_ADDR_FAIL:
+            return -1.0
+        ping_ms = ping3.ping(
+            f"{self.network_ip_addr_router[0]}.{self.network_ip_addr_router[1]}.{self.network_ip_addr_router[2]}.{self.network_ip_addr_router[3]}",
+            timeout=0.4,
+            unit="ms",
+        )
+        if ping_ms is None:
+            ping_ms = -1.0
+
+        return ping_ms
+
+    def __freq_to_channel(self, freq):
+        # 2.4GHz
+        if 2412 <= freq <= 2472:
+            return (freq - 2407) // 5
+        if freq == 2484:
+            return 14
+
+        # 5GHz
+        if 5000 <= freq <= 5900:
+            return (freq - 5000) // 5
+
+        # 6GHz (Wi-Fi 6E)
+        if 5925 <= freq <= 7125:
+            return (freq - 5950) // 5 + 1
+
+        return 0
+
+    def get_interface_info(self) -> InterfaceInfo:
+        return InterfaceInfo(
+            self.network_connection_method,
+            self.network_ssid,
+            self.network_rssi,
+            self.network_frequency,
+        )
 
     def get_ip_addr(self) -> list:
-        interface = self.__find_ip_interface()
-        addrs = psutil.net_if_addrs()
-        if interface and interface in addrs:
-            for addr in addrs[interface]:
-                if addr.family.name == "AF_INET":  # IPv4
-                    ip_parts = list(map(int, addr.address.split(".")))
-                    return ip_parts
-
-        # default interface 없음 or default interface에 ip 부여 안됨
-        # IP 주소 찾지 못함
-        return self.IP_ADDR_FAIL
+        return self.network_ip_addr
 
     def connect_serial(
         self, port="/dev/ttyMCU", baudrate=115200, timeout=1, write_timeout=1
@@ -143,11 +263,19 @@ class McuService:
             )
             self.domain_id_sbc = int(result.stdout.strip())
 
+        elif sp[0] == "$IW":  # 네트워크 정보 요청
+            self.is_req_iw = True
+
+        elif sp[0] == "$PG":  # Ping
+            self.is_req_ping = True
+
 
 def main():
     mcu_service = McuService()
     ser = mcu_service.connect_serial()
+
     last_ip_send_time = 0
+    last_network_detailed_send_time = 0
 
     try:
         while True:
@@ -156,10 +284,29 @@ def main():
             try:
                 # IP 보고
                 if current_time - last_ip_send_time >= 5:
+                    mcu_service.update_network_info()
                     ip_parts = mcu_service.get_ip_addr()
                     ip_message = f"$IP,{ip_parts[0]},{ip_parts[1]},{ip_parts[2]},{ip_parts[3]}\r\n"
                     ser.write(ip_message.encode())
                     last_ip_send_time = current_time
+
+                # 인터페이스 정보 전달
+                if mcu_service.is_req_iw:
+                    mcu_service.is_req_iw = False
+                    mcu_service.update_network_info()
+                    info = mcu_service.get_interface_info()
+
+                    message = f"$IW,{info.connect_method},{info.ssid},{info.rssi},{info.frequency}\r\n"
+                    ser.write(message.encode())
+
+                # ping 전달 (라우터로 ping)
+                if mcu_service.is_req_ping:
+                    mcu_service.is_req_ping = False
+                    mcu_service.update_network_info()
+                    ping_ms = mcu_service.get_ping_ms()
+
+                    message = f"$PG,{ping_ms:.2f}\r\n"
+                    ser.write(message.encode())
 
                 # RX
                 if ser.in_waiting > 0:
