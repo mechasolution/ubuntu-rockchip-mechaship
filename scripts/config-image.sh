@@ -274,7 +274,7 @@ make -j$(nproc)
 sudo make install
 git clone --recurse-submodules -b master https://github.com/mechasolution/mechaship.git ~/ros2_ws/src/mechaship
 cd ~/ros2_ws
-rosdep install --from-paths src --ignore-src -y --skip-keys=ros_wit_imu_node
+rosdep install --from-paths src --ignore-src -y
 colcon build --symlink-install
 ' >> ${chroot_dir}/home/ubuntu/temp/install_ydlidar_driver.sh
 chmod 777 ${chroot_dir}/home/ubuntu/temp/install_ydlidar_driver.sh
