@@ -114,3 +114,11 @@ runcmd:
 #- [ ls, -l, / ]
 #- [ sh, -xc, "echo $(date) ': hello world!'" ]
 #- [ wget, "http://ubuntu.com", -O, /run/mydir/index.html ]
+
+apt:
+  primary:
+    - arches: [default]
+      uri: http://kr.ports.ubuntu.com/ubuntu-ports/
+  security:
+    - arches: [default]
+      uri: http://kr.ports.ubuntu.com/ubuntu-ports/
