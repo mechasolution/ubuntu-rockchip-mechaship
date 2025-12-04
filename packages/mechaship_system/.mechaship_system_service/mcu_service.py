@@ -48,7 +48,7 @@ class McuService:
         self.network_interface_name = ""  # wlP4p65s0 등
         self.network_ip_addr = self.IP_ADDR_FAIL
         self.network_ip_addr_router = self.IP_ADDR_FAIL
-        self.network_ssid = ""
+        self.network_ssid = "**Unknown**"
         self.network_rssi = 0
         self.network_frequency = 0
         self.network_ping = 0.0
@@ -78,7 +78,7 @@ class McuService:
                 self.network_interface_name = ""
                 self.network_ip_addr = self.IP_ADDR_FAIL
                 self.network_ip_addr_router = self.IP_ADDR_FAIL
-                self.network_ssid = ""
+                self.network_ssid = "**Unknown**"
                 self.network_rssi = 0
                 self.network_frequency = 0
                 return
@@ -88,7 +88,7 @@ class McuService:
             self.network_interface_name = ""
             self.network_ip_addr = self.IP_ADDR_FAIL
             self.network_ip_addr_router = self.IP_ADDR_FAIL
-            self.network_ssid = ""
+            self.network_ssid = "**Unknown**"
             self.network_rssi = 0
             self.network_frequency = 0
 
@@ -97,7 +97,7 @@ class McuService:
             self.network_connection_method = "WLAN"
         else:
             self.network_connection_method = "LAN"
-            self.network_ssid = ""
+            self.network_ssid = "**LAN**"
             self.network_rssi = 0
             self.network_frequency = 0
             return
