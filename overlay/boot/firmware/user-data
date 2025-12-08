@@ -37,7 +37,7 @@ chpasswd:
 ## setting the hostname here will not make the machine reachable by this name.
 ## You may also wish to install avahi-daemon (see the "packages:" key below)
 ## to make your machine reachable by the .local domain
-hostname: "mechaship-{{random_id(6, 'abcdefghijklmnopqrstuvwxyz0123456789')}}"
+# hostname: "mechaship"
 preserve_hostname: false
 
 ## Set up the keyboard layout. See localectl(1), in particular the various
