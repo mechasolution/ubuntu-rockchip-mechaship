@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+import "nanopb.proto";
+
+//////////////////////////////
+// MCU -> SBC
+//////////////////////////////
+message ToSbcMessage {
+  oneof data {
+    BatteryInfo    battery_info     = 1;
+    PowerOffReq    power_off_req    = 2;
+    DomainIdInfo   domain_id_info   = 3;
+    HwInfoRes      hw_info_res      = 4;
+    NetworkInfoReq network_info_req = 5;
+    PingReq        ping_req         = 6;
+  }
+}
+
+message BatteryInfo {
+  float voltage    = 1;
+  float percentage = 2;
+}
+
+message PowerOffReq {
+  bool is_low_power = 1;
+}
+
+message DomainIdInfo {
+  uint32 id = 1;
+}
+
+message HwInfoRes {
+  uint64 build_timestamp = 1; // unix epoch seconds (UTC)
+  string git_commit_hash = 2 [(nanopb).max_length = 7];
+}
+
+message NetworkInfoReq {
+
+}
+
+message PingReq {
+
+}
+
+//////////////////////////////
+// SBC -> MCU
+//////////////////////////////
+message ToMcuMessage {
+  oneof data {
+    IpInfo         ip_info          = 1;
+    HwInfoReq      hw_info_req      = 2;
+    PowerOffEvt    power_off_evt    = 3;
+    NetworkInfoRes network_info_res = 4;
+    PingRes        ping_res         = 5;
+  }
+}
+
+message IpInfo {
+  bytes ipv4 = 1 [(nanopb).max_size = 4]; // network byte order
+}
+
+message HwInfoReq {
+
+}
+
+message PowerOffEvt{
+
+}
+
+message NetworkInfoRes {
+  NetworkType type      = 1;
+  string      ssid      = 2 [(nanopb).max_length = 32];
+  sint32      rssi      = 3;
+  uint32      frequency = 4;
+}
+
+enum NetworkType {
+  NETWORK_TYPE_NONE = 0;
+
+  NETWORK_TYPE_WLAN = 1;
+  NETWORK_TYPE_LAN  = 2;
+}
+
+message PingRes {
+  float ping_ms = 1;
+}
