@@ -284,6 +284,14 @@ chroot_run_ubuntu "./temp/install_ydlidar_driver.sh"
 cp -r ../packages/mechaship_system/.mechaship_system_service ${chroot_dir}/home/ubuntu/.
 cp -r  ../packages/mechaship_system/services/* ${chroot_dir}/etc/systemd/system/.
 
+echo  '#!/bin/bash
+apt-get install python3-pip python3-venv socat iw -y
+python3 -m venv /home/ubuntu/.mechaship_system_service/venv
+/home/ubuntu/.mechaship_system_service/venv/bin/pip install -r /home/ubuntu/.mechaship_system_service/requirements.txt
+' >> ${chroot_dir}/home/ubuntu/temp/setup_venv.sh
+chmod 777 ${chroot_dir}/home/ubuntu/temp/setup_venv.sh
+chroot_run "/home/ubuntu/temp/setup_venv.sh"
+
 chroot_run_ubuntu "sudo systemctl enable mechaship_system.service"
 chroot_run_ubuntu "sudo systemctl enable mechaship_power_off.service"
 
