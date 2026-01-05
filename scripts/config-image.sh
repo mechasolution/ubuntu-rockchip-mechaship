@@ -250,7 +250,8 @@ KERNEL=="ttyACM*", ATTRS{interface}=="MechaShip Motherboard CDC", ATTRS{bInterfa
 KERNEL=="ttyUSB*", ATTRS{idVendor}=="1a86", MODE="0666", GROUP="dialout", SYMLINK+="ttyGPS"
 
 # LiDAR
-KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0200", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyLiDAR"
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0200", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyLiDAR" # FIXME: 
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0300", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyLiDAR"
 
 # IMU
 KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0100", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyIMU"
