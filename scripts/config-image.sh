@@ -203,7 +203,6 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 sudo apt update
 sudo apt-get install ros-jazzy-ros-base ros-dev-tools python3-pip -y
 python3 -m pip config set global.break-system-packages true # Disable externally-managed-environment error
-pip install setuptools==70.0.0
 mkdir -p ~/ros2_ws/src && cd ~/ros2_ws
 colcon build
 cd
@@ -248,10 +247,11 @@ KERNEL=="ttyACM*", ATTRS{interface}=="MechaShip Motherboard CDC", ATTRS{bInterfa
 KERNEL=="ttyACM*", ATTRS{interface}=="MechaShip Motherboard CDC", ATTRS{bInterfaceNumber}=="02", MODE="0666", GROUP="dialout", SYMLINK+="ttyMCU"
 
 # GNSS (GPS)
-KERNEL=="ttyACM*", ATTRS{idVendor}=="1546", MODE="0666", GROUP="dialout", SYMLINK+="ttyGPS"
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="1a86", MODE="0666", GROUP="dialout", SYMLINK+="ttyGPS"
 
 # LiDAR
-KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0200", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyLiDAR"
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0200", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyLiDAR" # FIXME: 
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{bcdDevice}=="0300", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyLiDAR"
 
 # IMU
 KERNEL=="ttyUSB*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", ATTRS{bcdDevice}=="8134", MODE="0666", GROUP="dialout", SUBSYSTEM=="tty",SYMLINK+="ttyIMU"
@@ -285,10 +285,19 @@ chroot_run_ubuntu "./temp/install_ydlidar_driver.sh"
 cp -r ../packages/mechaship_system/.mechaship_system_service ${chroot_dir}/home/ubuntu/.
 cp -r  ../packages/mechaship_system/services/* ${chroot_dir}/etc/systemd/system/.
 
+echo  '#!/bin/bash
+apt-get install python3-pip python3-venv socat iw -y
+python3 -m venv /home/ubuntu/.mechaship_system_service/venv
+/home/ubuntu/.mechaship_system_service/venv/bin/pip install -r /home/ubuntu/.mechaship_system_service/requirements.txt
+' >> ${chroot_dir}/home/ubuntu/temp/setup_venv.sh
+chmod 777 ${chroot_dir}/home/ubuntu/temp/setup_venv.sh
+chroot_run "/home/ubuntu/temp/setup_venv.sh"
+
 chroot_run_ubuntu "sudo systemctl enable mechaship_system.service"
 chroot_run_ubuntu "sudo systemctl enable mechaship_power_off.service"
 
-chroot_run "apt-get install -y socat"
+chroot_run "apt-get install -y socat iw"
+chroot_run "pip install ping3 --break-system-packages"
 chroot_run "ln -s /home/ubuntu/.mechaship_system_service/mechaship_battery.sh /usr/local/bin/mechaship_battery"
 chroot_run "chmod 755 /usr/local/bin/mechaship_battery"
 

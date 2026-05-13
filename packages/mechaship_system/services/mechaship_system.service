@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/home/ubuntu/.mechaship_system_service
-ExecStart=/usr/bin/python3 mcu_service.py
+ExecStart=/home/ubuntu/.mechaship_system_service/venv/bin/python mcu_service.py
 RemainAfterExit=no
 Restart=on-failure
 RestartSec=2s

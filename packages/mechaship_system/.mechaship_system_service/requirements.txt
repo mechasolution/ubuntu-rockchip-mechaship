@@ -1,0 +1,5 @@
+protobuf
+grpcio-tools
+ping3
+cobs
+pyserial
